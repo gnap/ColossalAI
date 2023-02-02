@@ -39,11 +39,14 @@ from tqdm.auto import tqdm
 
 import colossalai
 import transformers
+from colossalai.amp import AMP_TYPE
 from colossalai.context import ParallelMode
 from colossalai.core import global_context as gpc
+from colossalai.auto_parallel.tensor_shard.initialize import autoparallelize
 from colossalai.logging import disable_existing_loggers, get_dist_logger
 from colossalai.nn.optimizer import HybridAdam
 from colossalai.nn.optimizer.zero_optimizer import ZeroOptimizer
+from colossalai.tensor import ColoParameter, ComputePattern, ComputeSpec, ReplicaSpec, ShardSpec
 from colossalai.nn.parallel import ZeroDDP
 from colossalai.tensor import ProcessGroup
 from colossalai.utils import get_current_device, get_dataloader
@@ -284,11 +287,52 @@ class DummyDataloader:
     def __len__(self):
         return self.length
 
+def tensor_parallelize(model: torch.nn.Module, pg: ProcessGroup):
+    for mn, module in model.named_modules():
+        for pn, param in module.named_parameters(recurse=False):
+            if hasattr(param, 'visited'):
+                continue
+            param.set_dist_spec(ReplicaSpec())
+            if 'mlp.c_fc' in mn:
+                if 'weight' in pn or 'bias' in pn:
+                    split_param_col_tp1d(param, pg) 
+                    param.compute_spec.set_output_replicate(False)
+                else:
+                    param.set_dist_spec(ReplicaSpec())
+            elif 'mlp.c_proj' in mn:
+                if 'weight' in pn:
+                    split_param_row_tp1d(param, pg)   
+                else:
+                    param.set_dist_spec(ReplicaSpec())
+            elif 'wte' in mn or 'wpe' in mn:
+                split_param_col_tp1d(param, pg)    
+            elif 'c_attn' in mn or 'q_proj' in mn:
+                split_param_row_tp1d(param, pg)   
+            else:
+                param.set_dist_spec(ReplicaSpec())
+
+            param.visited = True
+def split_param_single_dim_tp1d(dim: int, param: ColoParameter, pg: ProcessGroup):
+    spec = (ShardSpec([dim], [pg.tp_world_size()]), ComputeSpec(ComputePattern.TP1D))
+    param.set_tensor_spec(*spec)
+
+
+def split_param_row_tp1d(param: ColoParameter, pg: ProcessGroup):
+    split_param_single_dim_tp1d(0, param, pg)
+
+
+def split_param_col_tp1d(param: ColoParameter, pg: ProcessGroup):
+    split_param_single_dim_tp1d(-1, param, pg)
 
 def main():
     args = parse_args()
     disable_existing_loggers()
-    colossalai.launch_from_torch(config=dict())
+    colossalai.launch_from_torch(config=dict(
+        # fp16 = dict(mode=AMP_TYPE.NAIVE),
+        parallel = dict(
+        pipeline=dict(size=1),
+        tensor=dict(size=1, mode='1d')
+        )))
     logger = get_dist_logger()
     is_main_process = dist.get_rank() == 0
 
@@ -402,7 +446,14 @@ def main():
             model = OPTForCausalLM(config)
     else:
         logger.info("Finetune a pre-trained model", ranks=[0])
-        with ColoInitContext(device=init_dev):
+        world_size = torch.distributed.get_world_size()
+        shard_pg = ProcessGroup(tp_degree=2, dp_degree=8)
+        default_dist_spec = ShardSpec([-1], [world_size])
+        with ColoInitContext(device=init_dev,
+                 dtype=torch.half,
+                 #default_dist_spec=default_dist_spec,
+                 default_pg=shard_pg):
+            #model = OPTForCausalLM(config)
             model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
                                                    from_tf=bool(".ckpt" in args.model_name_or_path),
                                                    config=config,
@@ -411,16 +462,20 @@ def main():
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
 
-    PLACEMENT_POLICY = 'auto'
+    PLACEMENT_POLICY = 'cpu'
     cai_version = colossalai.__version__
     logger.info(f'using Colossal-AI version {cai_version}')
+
+    #tp_pg = ProcessGroup(tp_degree=2)
+    #tensor_parallelize(model, tp_pg)
+    #model = autoparallelize(model)
     if version.parse(cai_version) > version.parse("0.1.10"):
         from colossalai.nn.parallel import GeminiDDP
         model = GeminiDDP(model, device=get_current_device(), placement_policy=PLACEMENT_POLICY, pin_memory=True)
     elif version.parse(cai_version) <= version.parse("0.1.10") and version.parse(cai_version) >= version.parse("0.1.9"):
         from colossalai.gemini import ChunkManager, GeminiManager
-        pg = ProcessGroup()
         chunk_size = ChunkManager.search_chunk_size(model, 64 * 1024**2, 32)
+        pg = ProcessGroup()
         chunk_manager = ChunkManager(chunk_size,
                                      pg,
                                      enable_distributed_storage=True,
@@ -533,7 +588,7 @@ def main():
         },
     ]
 
-    optimizer = HybridAdam(optimizer_grouped_parameters, lr=args.learning_rate)
+    optimizer = HybridAdam(optimizer_grouped_parameters, lr=args.learning_rate, nvme_offload_fraction=1.0, nvme_offload_dir=f'/data/hf_home/offload/{gpc.get_global_rank()}')
     optimizer = ZeroOptimizer(optimizer, model, initial_scale=2**14)
 
     # Scheduler and math around the number of training steps.
