@@ -330,6 +330,10 @@ def main():
     args = parse_args()
     disable_existing_loggers()
     colossalai.launch_from_torch(config=dict(
+        zero = dict(model_config=dict(shard_strategy=TensorShardStrategy(),
+                              tensor_placement_policy="auto",
+                              reuse_fp16_shard=True),
+            optimizer_config=dict(gpu_margin_mem_ratio=0.8, initial_scale=16384)),
         # fp16 = dict(mode=AMP_TYPE.NAIVE),
         parallel = dict(
         pipeline=dict(size=1),
@@ -449,16 +453,16 @@ def main():
     else:
         logger.info("Finetune a pre-trained model", ranks=[0])
         world_size = torch.distributed.get_world_size()
-        tp_degree = 4
+        tp_degree = 2
         shard_pg = ProcessGroup(tp_degree=tp_degree, dp_degree= world_size // tp_degree)
         default_dist_spec = ShardSpec([-1], [world_size])
-        # with ColoInitContext(device=init_dev,
-        #          dtype=torch.half,
-        #          #default_dist_spec=default_dist_spec,
-        #          default_pg=shard_pg):
-        shard_strategy = TensorShardStrategy()
-        with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
-                            shard_param=True):        
+        with ColoInitContext(device=init_dev,
+                 dtype=torch.half,
+                 #default_dist_spec=default_dist_spec,
+                 default_pg=shard_pg):
+        # shard_strategy = TensorShardStrategy()
+        # with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
+        #                     shard_param=True):        
             #model = OPTForCausalLM(config)
             model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
                                                    from_tf=bool(".ckpt" in args.model_name_or_path),
