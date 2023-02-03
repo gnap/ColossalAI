@@ -447,7 +447,7 @@ def main():
     else:
         logger.info("Finetune a pre-trained model", ranks=[0])
         world_size = torch.distributed.get_world_size()
-        tp_degree = 2
+        tp_degree = 4
         shard_pg = ProcessGroup(tp_degree=tp_degree, dp_degree= world_size // tp_degree)
         default_dist_spec = ShardSpec([-1], [world_size])
         with ColoInitContext(device=init_dev,
