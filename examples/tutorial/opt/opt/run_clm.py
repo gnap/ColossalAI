@@ -42,6 +42,8 @@ import transformers
 from colossalai.amp import AMP_TYPE
 from colossalai.context import ParallelMode
 from colossalai.core import global_context as gpc
+from colossalai.zero.init_ctx import ZeroInitContext
+from colossalai.zero.shard_utils import TensorShardStrategy
 from colossalai.auto_parallel.tensor_shard.initialize import autoparallelize
 from colossalai.logging import disable_existing_loggers, get_dist_logger
 from colossalai.nn.optimizer import HybridAdam
@@ -331,7 +333,7 @@ def main():
         # fp16 = dict(mode=AMP_TYPE.NAIVE),
         parallel = dict(
         pipeline=dict(size=1),
-        tensor=dict(size=1, mode='1d')
+        tensor=dict(size=4, mode='1d')
         )))
     logger = get_dist_logger()
     is_main_process = dist.get_rank() == 0
@@ -450,10 +452,13 @@ def main():
         tp_degree = 4
         shard_pg = ProcessGroup(tp_degree=tp_degree, dp_degree= world_size // tp_degree)
         default_dist_spec = ShardSpec([-1], [world_size])
-        with ColoInitContext(device=init_dev,
-                 dtype=torch.half,
-                 #default_dist_spec=default_dist_spec,
-                 default_pg=shard_pg):
+        # with ColoInitContext(device=init_dev,
+        #          dtype=torch.half,
+        #          #default_dist_spec=default_dist_spec,
+        #          default_pg=shard_pg):
+        shard_strategy = TensorShardStrategy()
+        with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
+                            shard_param=True):        
             #model = OPTForCausalLM(config)
             model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
                                                    from_tf=bool(".ckpt" in args.model_name_or_path),
