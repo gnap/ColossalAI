@@ -599,7 +599,7 @@ def main():
     ]
 
     optimizer = HybridAdam(optimizer_grouped_parameters, lr=args.learning_rate, nvme_offload_fraction=1.0, nvme_offload_dir=f'/data/hf_home/offload/{gpc.get_global_rank()}')
-    optimizer = ZeroOptimizer(optimizer, model, initial_scale=2**14)
+    # optimizer = ZeroOptimizer(optimizer, model, initial_scale=2**14)
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
@@ -614,6 +614,12 @@ def main():
         num_warmup_steps=args.num_warmup_steps,
         num_training_steps=args.max_train_steps,
     )
+
+    model, train_dataloader, _, lr_scheduler = colossalai.initialize(model,
+                                                                    optimizer,
+                                                                    # criterion,
+                                                                    train_dataloader=train_dataloader,
+                                                                    lr_scheduler=lr_scheduler)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
