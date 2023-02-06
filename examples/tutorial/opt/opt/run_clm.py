@@ -616,7 +616,7 @@ def main():
         num_training_steps=args.max_train_steps,
     )
 
-    model, train_dataloader, _, lr_scheduler = colossalai.initialize(model,
+    engine, train_dataloader, _, lr_scheduler = colossalai.initialize(model,
                                                                     optimizer,
                                                                     # criterion,
                                                                     train_dataloader=train_dataloader,
