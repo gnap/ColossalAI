@@ -648,6 +648,7 @@ def main():
     completed_steps = 0
     starting_epoch = 0
     global_step = 0
+    """
     timer = MultiTimer()
     trainer = Trainer(engine=engine, logger=logger, timer=timer)
     # tflop = numel * gpc.config.BATCH_SIZE * gpc.config.SEQ_LEN * gpc.get_world_size(ParallelMode.MODEL) * gpc.get_world_size(ParallelMode.DATA) * 8 / (1024 ** 4)
@@ -679,7 +680,7 @@ def main():
             batch = {k: v.cuda() for k, v in batch.items()}
             outputs = model(use_cache=False, **batch)
             loss = outputs['loss']
-            optimizer.backward(loss)
+            engine.optimizer.backward(loss)
 
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
                 optimizer.step()
@@ -723,7 +724,7 @@ def main():
         # model.load_state_dict(load_state, strict=False)
 
     logger.info("Training finished", ranks=[0])
-    """
+    
 
 
 if __name__ == "__main__":
