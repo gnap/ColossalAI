@@ -53,6 +53,7 @@ from colossalai.nn.parallel import ZeroDDP
 from colossalai.tensor import ProcessGroup
 from colossalai.utils import get_current_device, get_dataloader
 from colossalai.utils.model.colo_init_context import ColoInitContext
+from colossalai.utils.timer import MultiTimer
 from colossalai.trainer import Trainer, hooks
 from transformers import (
     CONFIG_MAPPING,
@@ -647,7 +648,8 @@ def main():
     completed_steps = 0
     starting_epoch = 0
     global_step = 0
-    trainer = Trainer(engine=engine, logger=logger, timer=timier)
+    timer = MultiTimer()
+    trainer = Trainer(engine=engine, logger=logger, timer=timer)
     hook_list = [
         hooks.LossHook(),
         hooks.LRSchedulerHook(lr_scheduler=lr_scheduler, by_epoch=True),
