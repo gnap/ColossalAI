@@ -333,7 +333,7 @@ def main():
     disable_existing_loggers()
     colossalai.launch_from_torch(config=dict(
         zero = dict(model_config=dict(shard_strategy=TensorShardStrategy(),
-                              tensor_placement_policy="auto",
+                              tensor_placement_policy="cpu",
                               reuse_fp16_shard=True),
             optimizer_config=dict(gpu_margin_mem_ratio=0.8, initial_scale=16384)),
         # fp16 = dict(mode=AMP_TYPE.NAIVE),
@@ -683,9 +683,9 @@ def main():
             engine.optimizer.backward(loss)
 
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                optimizer.step()
+                engine.optimizer.step()
                 lr_scheduler.step()
-                optimizer.zero_grad()
+                engine.optimizer.zero_grad()
                 progress_bar.update(1)
                 completed_steps += 1
 
