@@ -452,22 +452,22 @@ def main():
             model = OPTForCausalLM(config)
     else:
         logger.info("Finetune a pre-trained model", ranks=[0])
-        world_size = torch.distributed.get_world_size()
-        tp_degree = 8
-        shard_pg = ProcessGroup(tp_degree=tp_degree, dp_degree= world_size // tp_degree)
-        default_dist_spec = ShardSpec([-1], [world_size])
-        with ColoInitContext(device=init_dev,
-                 dtype=torch.half,
-                 #default_dist_spec=default_dist_spec,
-                 default_pg=shard_pg):
-        # shard_strategy = TensorShardStrategy()
-        # with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
-        #                     shard_param=True):        
-            #model = OPTForCausalLM(config)
-            model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
-                                                   from_tf=bool(".ckpt" in args.model_name_or_path),
-                                                   config=config,
-                                                   local_files_only=False)
+        # world_size = torch.distributed.get_world_size()
+        # tp_degree = 8
+        # shard_pg = ProcessGroup(tp_degree=tp_degree, dp_degree= world_size // tp_degree)
+        # default_dist_spec = ShardSpec([-1], [world_size])
+        # with ColoInitContext(device=init_dev,
+        #          dtype=torch.half,
+        #          #default_dist_spec=default_dist_spec,
+        #          default_pg=shard_pg):
+        shard_strategy = TensorShardStrategy()
+        with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
+                            shard_param=True):        
+            model = OPTForCausalLM(config)
+            # model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
+            #                                        from_tf=bool(".ckpt" in args.model_name_or_path),
+            #                                        config=config,
+            #                                        local_files_only=False)
 
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
@@ -479,19 +479,19 @@ def main():
     #tp_pg = ProcessGroup(tp_degree=2)
     #tensor_parallelize(model, tp_pg)
     #model = autoparallelize(model)
-    if version.parse(cai_version) > version.parse("0.1.10"):
-        from colossalai.nn.parallel import GeminiDDP
-        model = GeminiDDP(model, device=get_current_device(), placement_policy=PLACEMENT_POLICY, pin_memory=True)
-    elif version.parse(cai_version) <= version.parse("0.1.10") and version.parse(cai_version) >= version.parse("0.1.9"):
-        from colossalai.gemini import ChunkManager, GeminiManager
-        chunk_size = ChunkManager.search_chunk_size(model, 64 * 1024**2, 32)
-        pg = ProcessGroup()
-        chunk_manager = ChunkManager(chunk_size,
-                                     pg,
-                                     enable_distributed_storage=True,
-                                     init_device=GeminiManager.get_default_device(PLACEMENT_POLICY))
-        gemini_manager = GeminiManager(PLACEMENT_POLICY, chunk_manager)
-        model = ZeroDDP(model, gemini_manager)
+    # if version.parse(cai_version) > version.parse("0.1.10"):
+    #     from colossalai.nn.parallel import GeminiDDP
+    #     model = GeminiDDP(model, device=get_current_device(), placement_policy=PLACEMENT_POLICY, pin_memory=True)
+    # elif version.parse(cai_version) <= version.parse("0.1.10") and version.parse(cai_version) >= version.parse("0.1.9"):
+    #     from colossalai.gemini import ChunkManager, GeminiManager
+    #     chunk_size = ChunkManager.search_chunk_size(model, 64 * 1024**2, 32)
+    #     pg = ProcessGroup()
+    #     chunk_manager = ChunkManager(chunk_size,
+    #                                  pg,
+    #                                  enable_distributed_storage=True,
+    #                                  init_device=GeminiManager.get_default_device(PLACEMENT_POLICY))
+    #     gemini_manager = GeminiManager(PLACEMENT_POLICY, chunk_manager)
+    #     model = ZeroDDP(model, gemini_manager)
 
     logger.info(f'{model.__class__.__name__} has been created', ranks=[0])
 
