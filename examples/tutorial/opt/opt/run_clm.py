@@ -53,6 +53,7 @@ from colossalai.nn.parallel import ZeroDDP
 from colossalai.tensor import ProcessGroup
 from colossalai.utils import get_current_device, get_dataloader
 from colossalai.utils.model.colo_init_context import ColoInitContext
+from colossalai.trainer import Trainer, hooks
 from transformers import (
     CONFIG_MAPPING,
     MODEL_MAPPING,
@@ -646,7 +647,25 @@ def main():
     completed_steps = 0
     starting_epoch = 0
     global_step = 0
+    trainer = Trainer(engine=engine, logger=logger, timer=timier)
+    hook_list = [
+        hooks.LossHook(),
+        hooks.LRSchedulerHook(lr_scheduler=lr_scheduler, by_epoch=True),
+        hooks.LogMetricByEpochHook(logger),
+        hooks.ThroughputHook(ignored_steps=10, tflop_per_step=tflop),
+        hooks.LogMetricByStepHook(),
+        hooks.LogMemoryByEpochHook(logger),
+    # hooks.LogMemoryByEpochHook(logger),
+    # hooks.LogTimingByEpochHook(timer, logger),
+    ]
+    trainer.fit(train_dataloader=train_dataloader,
+                epochs=args.num_train_epochs,
+                test_interval=1,
+                hooks=hook_list,
+                display_progress=True,
+                return_output_label=False)
 
+    """
     for epoch in range(starting_epoch, args.num_train_epochs):
 
         if completed_steps >= args.max_train_steps:
@@ -701,6 +720,7 @@ def main():
         # model.load_state_dict(load_state, strict=False)
 
     logger.info("Training finished", ranks=[0])
+    """
 
 
 if __name__ == "__main__":
