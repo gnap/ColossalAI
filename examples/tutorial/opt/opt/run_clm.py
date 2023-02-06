@@ -650,6 +650,8 @@ def main():
     global_step = 0
     timer = MultiTimer()
     trainer = Trainer(engine=engine, logger=logger, timer=timer)
+    tflop = numel * gpc.config.BATCH_SIZE * gpc.config.SEQ_LEN \
+        * gpc.get_world_size(ParallelMode.MODEL) * gpc.get_world_size(ParallelMode.DATA) * 8 / (1024 ** 4)
     hook_list = [
         hooks.LossHook(),
         hooks.LRSchedulerHook(lr_scheduler=lr_scheduler, by_epoch=True),
