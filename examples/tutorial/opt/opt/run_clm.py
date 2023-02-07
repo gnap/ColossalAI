@@ -680,12 +680,12 @@ def main():
             batch = {k: v.cuda() for k, v in batch.items()}
             outputs = model(use_cache=False, **batch)
             loss = outputs['loss']
-            engine.optimizer.backward(loss)
+            engine.backward(loss)
 
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                engine.optimizer.step()
+                engine.step()
                 lr_scheduler.step()
-                engine.optimizer.zero_grad()
+                engine.zero_grad()
                 progress_bar.update(1)
                 completed_steps += 1
 
