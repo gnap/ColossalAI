@@ -464,7 +464,8 @@ def main():
         #          #default_dist_spec=default_dist_spec,
         #          default_pg=shard_pg):
         shard_strategy = TensorShardStrategy()
-        with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
+        with ZeroInitContext(target_device=init_dev,
+                            shard_strategy=shard_strategy,
                             shard_param=True):        
             # model = OPTForCausalLM(config)
             model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
