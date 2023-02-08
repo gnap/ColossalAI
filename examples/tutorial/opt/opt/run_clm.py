@@ -472,14 +472,15 @@ def main():
             #                                       from_tf=bool(".ckpt" in args.model_name_or_path),
             #                                       config=config,
             #                                       local_files_only=False)
-    
     cai_version = colossalai.__version__
+    logger.info(f'rank {gpc.get_local_rank(parallel_mode=ParallelMode.DATA)} using Colossal-AI version {cai_version}')
     with barrier_context(executor_rank=0, parallel_mode=ParallelMode.DATA):
-        logger.info(f'using Colossal-AI version {cai_version}')
+        logger.info(f'all local process initialized model.')
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
 
     PLACEMENT_POLICY = 'cpu'
+
     #tp_pg = ProcessGroup(tp_degree=2)
     #tensor_parallelize(model, tp_pg)
     #model = autoparallelize(model)
