@@ -446,7 +446,8 @@ def main():
         init_dev = get_current_device()
 
     # build model
-    if False and args.model_name_or_path is None or args.model_name_or_path == 'facebook/opt-13b':
+    #if False and args.model_name_or_path is None or args.model_name_or_path == 'facebook/opt-13b':
+    if False:
         # currently, there has a bug in pretrained opt-13b
         # we can not import it until huggingface fix it
         logger.info("Train a new model from scratch", ranks=[0])
