@@ -465,11 +465,11 @@ def main():
         shard_strategy = TensorShardStrategy()
         with ZeroInitContext(target_device=torch.cuda.current_device(), shard_strategy=shard_strategy,
                             shard_param=True):        
-            model = OPTForCausalLM(config)
-            # model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
-            #                                        from_tf=bool(".ckpt" in args.model_name_or_path),
-            #                                        config=config,
-            #                                        local_files_only=False)
+            # model = OPTForCausalLM(config)
+            model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
+                                                   from_tf=bool(".ckpt" in args.model_name_or_path),
+                                                   config=config,
+                                                   local_files_only=False)
 
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
