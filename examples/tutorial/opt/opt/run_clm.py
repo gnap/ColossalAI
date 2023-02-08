@@ -447,7 +447,6 @@ def main():
 
     # build model
     #if False and args.model_name_or_path is None or args.model_name_or_path == 'facebook/opt-13b':
-    """
     if False:
         # currently, there has a bug in pretrained opt-13b
         # we can not import it until huggingface fix it
@@ -455,8 +454,6 @@ def main():
         with ColoInitContext(device=init_dev):
             model = OPTForCausalLM(config)
     else:
-    """
-    with barrier_context(executor_rank=0, parallel_mode=ParallelMode.DATA):
         logger.info("Finetune a pre-trained model", ranks=[0])
         # world_size = torch.distributed.get_world_size()
         # tp_degree = 8
@@ -475,14 +472,14 @@ def main():
             #                                       from_tf=bool(".ckpt" in args.model_name_or_path),
             #                                       config=config,
             #                                       local_files_only=False)
-            logger.info(f'rank {gpc.get_global_rank()} using Colossal-AI version {cai_version}')
+            logger.info(f'rank {gpc.get_local_rank()} using Colossal-AI version {cai_version}')
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
 
     PLACEMENT_POLICY = 'cpu'
     cai_version = colossalai.__version__
     logger.info(f'using Colossal-AI version {cai_version}')
-
+    torch.cuda.synchronize()
     #tp_pg = ProcessGroup(tp_degree=2)
     #tensor_parallelize(model, tp_pg)
     #model = autoparallelize(model)
