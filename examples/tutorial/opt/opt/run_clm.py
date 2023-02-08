@@ -474,7 +474,7 @@ def main():
             #                                       local_files_only=False)
     cai_version = colossalai.__version__
     logger.info(f'rank {gpc.get_local_rank(parallel_mode=ParallelMode.DATA)} using Colossal-AI version {cai_version}')
-    with barrier_context(executor_rank=0, parallel_mode=ParallelMode.DATA):
+    with barrier_context():
         logger.info(f'all local process initialized model.')
     # enable graident checkpointing
     model.gradient_checkpointing_enable()
@@ -698,6 +698,7 @@ def main():
             if completed_steps >= args.max_train_steps:
                 break
 
+        continue
         model.eval()
         losses = []
         for step, batch in enumerate(eval_dataloader):
