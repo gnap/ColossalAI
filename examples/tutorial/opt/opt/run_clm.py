@@ -335,7 +335,7 @@ def main():
         zero = dict(model_config=dict(shard_strategy=TensorShardStrategy(),
                               tensor_placement_policy="auto",
                               reuse_fp16_shard=True),
-            optimizer_config=dict(gpu_margin_mem_ratio=0.8, initial_scale=16384)),
+            optimizer_config=dict(gpu_margin_mem_ratio=0.5, initial_scale=16384)),
         # fp16 = dict(mode=AMP_TYPE.NAIVE),
         parallel = dict(
         pipeline=dict(size=1),
