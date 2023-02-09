@@ -698,13 +698,13 @@ def main():
             if completed_steps >= args.max_train_steps:
                 break
 
-        continue
-        model.eval()
+        # continue
+        engine.eval()
         losses = []
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
                 batch = {k: v.cuda() for k, v in batch.items()}
-                outputs = model(**batch)
+                outputs = engine(**batch)
 
         loss = outputs['loss'].unsqueeze(0)
         losses.append(loss)
