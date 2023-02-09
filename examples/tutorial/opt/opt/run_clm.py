@@ -679,6 +679,7 @@ def main():
             break
 
         model.train()
+        model._start_collect_memstats()
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.cuda() for k, v in batch.items()}
             outputs = model(use_cache=False, **batch)
