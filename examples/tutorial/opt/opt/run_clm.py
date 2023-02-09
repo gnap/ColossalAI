@@ -678,11 +678,10 @@ def main():
         if completed_steps >= args.max_train_steps:
             break
 
-        model.train()
-        model._start_collect_memstats()
+        engine.train()
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.cuda() for k, v in batch.items()}
-            outputs = model(use_cache=False, **batch)
+            outputs = engine(use_cache=False, **batch)
             loss = outputs['loss']
             engine.backward(loss)
 
