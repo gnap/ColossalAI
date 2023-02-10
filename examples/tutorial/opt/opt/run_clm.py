@@ -340,7 +340,7 @@ def main():
         NUM_MICRO_BATCHES=2,
         parallel = dict(
         pipeline=dict(size=1),
-        tensor=dict(size=2, mode='1d')
+        tensor=dict(size=8, mode='1d')
         )))
     logger = get_dist_logger()
     is_main_process = dist.get_rank() == 0
