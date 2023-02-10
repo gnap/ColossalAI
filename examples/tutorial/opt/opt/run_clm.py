@@ -339,8 +339,8 @@ def main():
         # fp16 = dict(mode=AMP_TYPE.NAIVE),
         NUM_MICRO_BATCHES=2,
         parallel = dict(
-        pipeline=dict(size=2),
-        tensor=dict(size=1, mode='1d')
+        pipeline=dict(size=1),
+        tensor=dict(size=2, mode='1d')
         )))
     logger = get_dist_logger()
     is_main_process = dist.get_rank() == 0
