@@ -336,11 +336,11 @@ def main():
                               tensor_placement_policy="auto",
                               reuse_fp16_shard=True),
             optimizer_config=dict(gpu_margin_mem_ratio=0.5, initial_scale=16384)),
-        # fp16 = dict(mode=AMP_TYPE.NAIVE),
+        fp16 = dict(mode=AMP_TYPE.NAIVE),
         NUM_MICRO_BATCHES=2,
         parallel = dict(
         pipeline=dict(size=1),
-        tensor=dict(size=8, mode='1d')
+        tensor=dict(size=1, mode='1d')
         )))
     logger = get_dist_logger()
     is_main_process = dist.get_rank() == 0
