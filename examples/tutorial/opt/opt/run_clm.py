@@ -467,11 +467,11 @@ def main():
         with ZeroInitContext(target_device=init_dev,
                             shard_strategy=shard_strategy,
                             shard_param=True):        
-            #model = OPTForCausalLM(config)
-            model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
-                                                   from_tf=bool(".ckpt" in args.model_name_or_path),
-                                                   config=config,
-                                                   local_files_only=False)
+            model = OPTForCausalLM(config)
+            #model = OPTForCausalLM.from_pretrained(args.model_name_or_path,
+            #                                       from_tf=bool(".ckpt" in args.model_name_or_path),
+            #                                       config=config,
+            #                                       local_files_only=False)
     cai_version = colossalai.__version__
     logger.info(f'rank {gpc.get_local_rank(parallel_mode=ParallelMode.DATA)} using Colossal-AI version {cai_version}')
     with barrier_context():
